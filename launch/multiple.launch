@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<launch>
+
+
+    <node name="bt_client_1" pkg="bt_client" type="bt_client" output="screen">
+        <remap from="odom" to="/firefly1/odometry_sensor1/odometry"/>
+        <remap from="path" to="dsp/path1"/>   
+        <remap from="setPathGoal" to="dsp/set_goal1"/>
+        <remap from="goalPose" to="/firefly1/command/pose"/>
+    </node>
+    
+	<node name="dsp1" pkg="dsp" type="dsp_node" output="screen">
+		<param name="use_gazebo_odom" type="bool" value="true"/>
+                <param name="odom_topic" type="String" value="/firefly1/odometry_sensor1/odometry"/>
+		<param name="odom_frame_id" type="String" value="map"/>
+		<param name="map_topic" type="String" value="/projected_map"/>
+		<param name="use_3d" type="bool" value="false"/>
+        <param name="risk" type="int" value="5"/>
+        
+        
+        
+        <param name="frame_agent" type="String" value="firefly1/base_link"/>
+        <remap from="dsp/path" to="dsp/path1"/>
+       <!-- <remap from="dsp/occupancy_map" to="dsp/occupancy_map1"/> -->
+        <remap from="dsp/set_goal" to="dsp/set_goal1"/>
+	</node>
+
+
+
+
+    <node name="bt_client_2" pkg="bt_client" type="bt_client" output="screen">
+        <remap from="odom" to="/firefly2/odometry_sensor1/odometry"/>
+        <remap from="path" to="dsp/path2"/>   
+        <remap from="setPathGoal" to="dsp/set_goal2"/>
+        <remap from="goalPose" to="/firefly2/command/pose"/>
+    </node>
+    
+	<node name="dsp2" pkg="dsp" type="dsp_node" output="screen">
+		<param name="use_gazebo_odom" type="bool" value="true"/>
+                <param name="odom_topic" type="String" value="/firefly2/odometry_sensor1/odometry"/>
+		<param name="odom_frame_id" type="String" value="map"/>
+		<param name="map_topic" type="String" value="/projected_map"/>
+		<param name="use_3d" type="bool" value="false"/>
+        <param name="risk" type="int" value="5"/>
+        
+        
+        
+        <param name="frame_agent" type="String" value="firefly2/base_link"/>
+        <remap from="dsp/path" to="dsp/path2"/>
+       <!-- <remap from="dsp/occupancy_map" to="dsp/occupancy_map1"/> -->
+        <remap from="dsp/set_goal" to="dsp/set_goal2"/>
+	</node>
+
+
+	
+	
+	
+</launch>
