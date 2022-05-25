@@ -30,7 +30,7 @@
 #include "nav_msgs/Odometry.h"
 #include "nav_msgs/Path.h"
 
-//#include "dsp/pathCost.h"
+#include "dsp/pathCost.h"
 
 
 namespace auction_ns
@@ -73,7 +73,7 @@ namespace auction_ns
 
         taskStatus taskCurrentStatus;
 
-        virtual double costForTask(auction_msgs::task task); // return cost for task, (distance, cost from dsp, time, etc.)
+        virtual void costForTasks(const std::vector<auction_msgs::task>& tasks, std::vector<auction_msgs::price_bid>& pricesToFill); // return cost for task, (distance, cost from dsp, time, etc.)
         virtual std::string getXMLForTask(auction_msgs::task task);
         virtual std::string getXMLNoTask();
         virtual void initNodes(BT::Tree& tree);
@@ -88,6 +88,16 @@ namespace auction_ns
 
         Auction_client_bt(); // setup callbacks, state (used for bt), etc. here
     };
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -114,9 +124,8 @@ namespace auction_ns
 
 
         uav_state state;
-        //ros::ServiceClient pathCostClient;
-  
-
+ 
+        ros::ServiceClient pathCostServiceClient;
         
 
 
@@ -129,7 +138,7 @@ namespace auction_ns
         void pathCB(const nav_msgs::Path& msg);
 
 
-        double costForTask(auction_msgs::task task);
+        void costForTasks(const std::vector<auction_msgs::task>& tasks, std::vector<auction_msgs::price_bid>& pricesToFill);
         std::string getXMLForTask(auction_msgs::task task);
         std::string getXMLNoTask();
         void initNodes(BT::Tree& tree);
@@ -182,7 +191,7 @@ namespace auction_ns
         void pathCB(const nav_msgs::Path& msg);
 
 
-        double costForTask(auction_msgs::task task);
+        void costForTasks(const std::vector<auction_msgs::task>& tasks, std::vector<auction_msgs::price_bid>& pricesToFill);
         std::string getXMLForTask(auction_msgs::task task);
         std::string getXMLNoTask();
         void initNodes(BT::Tree& tree);

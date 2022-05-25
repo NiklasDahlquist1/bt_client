@@ -13,7 +13,7 @@ int main(int argc, char** argv)
     r.sleep();
     ros::spinOnce(); // delay to allow callbacks to update state, etc.
 
-    client.spin_loop(50.0);
+    client.spin_loop(150.0);
     
 
     return 0;

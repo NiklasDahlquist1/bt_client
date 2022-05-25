@@ -15,6 +15,7 @@ find_package(
     auction_msgs
     auction_client
     behaviortree_cpp_v3
+    dsp
 )
 
 ## System dependencies are found with CMake's conventions

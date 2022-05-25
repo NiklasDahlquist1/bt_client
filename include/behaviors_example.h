@@ -132,6 +132,93 @@ namespace behaviors
             }
     };
 
+    class Follow3DPath : public BT::StatefulActionNode
+    {
+        private: 
+            auction_ns::uav_state* statePtr;
+
+            bool atPoint3D(geometry_msgs::Point point)
+            {
+                double error2 = pow(statePtr->currentPose.position.x - point.x, 2) + 
+                                pow(statePtr->currentPose.position.y - point.y, 2) +
+                                pow(statePtr->currentPose.position.z - point.z, 2);
+
+                double tol = 1;
+
+                return error2 < pow(tol, 2);
+            }
+
+        public:
+
+            void init(auction_ns::uav_state* statePtr)
+            {
+                if(statePtr == nullptr)
+                {
+                    //error
+                }
+                this->statePtr = statePtr;
+            }
+
+            Follow3DPath(const std::string& name, const BT::NodeConfiguration& config) : StatefulActionNode(name, config)
+            {
+            }
+
+            static BT::PortsList providedPorts()
+            {
+                return{ };
+            }
+
+            BT::NodeStatus logic()
+            {
+                
+                if(statePtr->path.poses.size() > statePtr->pathIndex)
+                {
+                    geometry_msgs::Point goalPoint = statePtr->path.poses[statePtr->pathIndex].pose.position;
+                    while( atPoint3D(goalPoint))
+                    {
+                        if (statePtr->path.poses.size() > statePtr->pathIndex + 1)
+                        {
+                            statePtr->pathIndex++;
+                            goalPoint = statePtr->path.poses[statePtr->pathIndex].pose.position;
+                        }
+                        else 
+                        {
+                            break;
+                        }
+                    }
+                    //goalPoint.z = 2; // set height
+
+
+                    geometry_msgs::PoseStamped poseStamped;
+                    poseStamped.header.stamp = ros::Time::now();
+                    poseStamped.header.frame_id = "world";
+                    poseStamped.pose.position = goalPoint;
+                    statePtr->goalPoint_pub.publish(poseStamped);
+                    return BT::NodeStatus::RUNNING;
+                }
+                else
+                {
+                    // no path/ path ended
+                    return BT::NodeStatus::RUNNING;
+                }
+
+            }
+            BT::NodeStatus onStart()
+            {
+                return logic();
+            }
+
+            BT::NodeStatus onRunning()
+            {
+                return logic();
+            }
+
+            void onHalted()
+            {
+                //
+            }
+    };
+
 
 
 
@@ -163,6 +250,7 @@ namespace behaviors
 
             BT::NodeStatus logic()
             {
+                
                 geometry_msgs::PoseStamped poseStamped;
                 poseStamped.header.stamp = ros::Time::now();
                 poseStamped.header.frame_id = "world";
@@ -219,7 +307,7 @@ namespace behaviors
                                 pow(statePtr->currentPose.position.y - statePtr->goalPoint.y, 2) + 
                                 pow(statePtr->currentPose.position.z - statePtr->goalPoint.z, 2);
 
-                double tol = 0.2;
+                double tol = 1;
                 //std::cout << "uav error: " << error2 << std::endl;
 
                 if(error2 < pow(tol, 2))

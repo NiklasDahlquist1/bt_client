@@ -56,6 +56,7 @@
   <depend>auction_msgs</depend>
   <depend>auction_client</depend>
   <depend>behaviortree_cpp_v3</depend>
+  <depend>dsp</depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

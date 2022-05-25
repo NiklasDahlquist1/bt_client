@@ -2,6 +2,9 @@
 
 #include "bt_client.hpp"
 
+#include <chrono>
+#include <unistd.h>
+#include <iostream>
 
 #include "behaviors_example.h"
 
@@ -64,12 +67,15 @@ namespace auction_ns
     {
         return taskCurrentStatus;
     }
-    double Auction_client_bt::costForTask(auction_msgs::task task)
+    /*double Auction_client_bt::costForTask(auction_msgs::task task)
     {
         std::cout << "cost for task function not implemented" << std::endl;
         return -1;
+    }*/
+    void Auction_client_bt::costForTasks(const std::vector<auction_msgs::task>& tasks, std::vector<auction_msgs::price_bid>& pricesToFill)
+    {
+        return;
     }
-
 
     void Auction_client_bt::initFactory(BT::BehaviorTreeFactory& factory)
     {
@@ -149,10 +155,10 @@ namespace auction_ns
         std::cout << "client started" << std::endl;
         initFactory(factory);
 
-        //pathCostClient = nodeHandle.serviceClient<dsp::pathCost>("dsp/path_cost");
+        pathCostServiceClient = nodeHandle.serviceClient<dsp::pathCost>("dsp/path_cost");
     }
 
-
+/*
     double Client_uav::costForTask(auction_msgs::task task)
     {
         if(task.task_name == "moveTo")
@@ -183,23 +189,40 @@ namespace auction_ns
 
             // copmute cost, based on current state and goal pos
 
-            double cost = pow((state.currentPose.position.x - goal.x), 2) + 
-                          pow((state.currentPose.position.y - goal.y), 2);
+//           double cost = pow((state.currentPose.position.x - goal.x), 2) + 
+//                         pow((state.currentPose.position.y - goal.y), 2);
 
-            return cost;
 
-            /*dsp::pathCost srv;
+            double cost;
+            dsp::pathCost srv;
             srv.request.start = state.currentPose.position;
-            srv.request.stop = state.goalPoint;
-            if (pathCostClient.call(srv))
+            srv.request.start.z = 0;
+            //std::cout << "start: " << state.currentPose.position << std::endl;
+            srv.request.stop = goal;
+            srv.request.stop.z = 0;
+            //std::cout << "stop: " << goal << std::endl;
+            
+
+            if (pathCostServiceClient.call(srv))
             {
-                std::cout << "cost " << srv.response.cost << std::endl;
-                return srv.response.cost;
+                //std::cout << "Cost: " << srv.response.cost << std::endl;
+                cost = srv.response.cost;
+
+                if(cost > 1e9)
+                {
+                    cost = -1;
+                }
             }
             else
             {
-                return -1;
-            }*/
+                std::cout << "Failed to call service path_cost" << std::endl;
+                cost = -1;
+                //return 1;
+            }
+
+            std::cout << "Client: " << name <<  " Cost: " << srv.response.cost << std::endl;
+
+            return cost;
 
         }
         else
@@ -207,6 +230,123 @@ namespace auction_ns
             return -1;
         }
     }
+
+    */
+
+
+    void Client_uav::costForTasks(const std::vector<auction_msgs::task>& tasks, std::vector<auction_msgs::price_bid>& pricesToFill)
+    {
+        auto start = std::chrono::steady_clock::now();
+        
+        for(auction_msgs::task task : tasks)
+        {
+            double priceForTask = -1;
+            
+            if(task.task_name == "moveTo")
+            {
+                geometry_msgs::Point goal; // check number of args?
+                auto parts = BT::splitString(task.task_data, ';');
+                goal.x = BT::convertFromString<double>(parts[0]);
+                goal.y = BT::convertFromString<double>(parts[1]);
+                goal.z = BT::convertFromString<double>(parts[2]);
+
+
+                // copmute cost, based on current state and goal pos
+
+                double cost = pow((state.currentPose.position.x - goal.x), 2) + 
+                            pow((state.currentPose.position.y - goal.y), 2) + 
+                            pow((state.currentPose.position.z - goal.z), 2);
+
+                priceForTask = cost;
+            }
+            if(task.task_name == "moveTo3D")
+            {
+                geometry_msgs::Point goal; // check number of args?
+                auto parts = BT::splitString(task.task_data, ';');
+                goal.x = BT::convertFromString<double>(parts[0]);
+                goal.y = BT::convertFromString<double>(parts[1]);
+                goal.z = BT::convertFromString<double>(parts[2]);
+
+
+                // copmute cost, based on current state and goal pos
+
+                double cost = pow((state.currentPose.position.x - goal.x), 2) + 
+                            pow((state.currentPose.position.y - goal.y), 2) + 
+                            pow((state.currentPose.position.z - goal.z), 2);
+
+                            
+
+                priceForTask = cost;
+            }
+            else if(task.task_name == "moveTo2D")
+            {
+                geometry_msgs::Point goal; // check number of args? 
+                auto parts = BT::splitString(task.task_data, ';');
+                goal.x = BT::convertFromString<double>(parts[0]);
+                goal.y = BT::convertFromString<double>(parts[1]);
+                goal.z = BT::convertFromString<double>(parts[2]);
+
+
+                // copmute cost, based on current state and goal pos
+
+//               double cost = pow((state.currentPose.position.x - goal.x), 2) + 
+//                             pow((state.currentPose.position.y - goal.y), 2);
+
+
+                double cost;
+                dsp::pathCost srv;
+                srv.request.start = state.currentPose.position;
+                srv.request.start.z = 0;
+                //std::cout << "start: " << state.currentPose.position << std::endl;
+                srv.request.stop = goal;
+                srv.request.stop.z = 0;
+                //std::cout << "stop: " << goal << std::endl;
+                
+
+                if (pathCostServiceClient.call(srv))
+                {
+                    //std::cout << "Cost: " << srv.response.cost << std::endl;
+                    cost = srv.response.cost;
+
+                    if(cost > 1e9)
+                    {
+                        cost = -1;
+                    }
+                }
+                else
+                {
+                    std::cout << "Failed to call service path_cost" << std::endl;
+                    cost = -1;
+                    //return 1;
+                }
+ 
+        
+                    
+                //std::cout << "Client: " << name <<  " Cost: " << srv.response.cost << std::endl;
+
+                priceForTask = cost;
+
+            }
+            else
+            {
+                priceForTask = -1;
+            }
+
+
+            auction_msgs::price_bid p;
+            p.task_ID = task.task_ID;
+            p.price = priceForTask;
+
+            pricesToFill.push_back(p);
+        }
+        auto end = std::chrono::steady_clock::now();
+        //std::cout << "Elapsed time in milliseconds: "
+        //          << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+        //          << " ms" << std::endl;
+    }
+
+
+
     std::string Client_uav::getXMLForTask(auction_msgs::task task)
     {
         if(task.task_name == "moveTo")
@@ -272,6 +412,38 @@ namespace auction_ns
 
             return xml_text;
         }
+        else if(task.task_name == "moveTo3D")
+        {
+            // setup task variables, should be removed and merged into the tree? TODO
+            geometry_msgs::Point goal; // check number of args?
+            auto parts = BT::splitString(task.task_data, ';');
+            goal.x = BT::convertFromString<double>(parts[0]);
+            goal.y = BT::convertFromString<double>(parts[1]);
+            goal.z = BT::convertFromString<double>(parts[2]);
+            //goal.z = 0;
+
+            this->state.goalPoint = goal;
+
+            std::cout << "Got new task, moveTo3D. Parameters: " << goal.x << ", " << goal.y << ", "<< goal.z << std::endl;
+
+
+            state.setGoalPathPlanner_pub.publish(goal);
+
+            //generate XML here
+            static const char* xml_text = R"(
+            <root main_tree_to_execute = "MainTree" >
+                <BehaviorTree ID="MainTree">
+                    <ReactiveFallback name="root">
+                        <Action ID="UAVAtPoint"/>
+                        <Action ID="Follow3DPath"/>
+                    </ReactiveFallback>
+                </BehaviorTree>
+            </root>
+            )";
+
+
+            return xml_text;
+        }
         else
         {
             return "";
@@ -284,6 +456,9 @@ namespace auction_ns
         this->state.goalPoint = state.currentPose.position;
         std::cout << "goal no task: " << state.goalPoint.x << ", " << state.goalPoint.y << ", " << state.goalPoint.z << std::endl;
 
+        // TODO ???
+        //state.goalPoint.z = 2;
+        state.setGoalPathPlanner_pub.publish(state.goalPoint);
 
         static const char* xml_text = R"(
             <root main_tree_to_execute = "MainTree" >
@@ -315,6 +490,11 @@ namespace auction_ns
             {
                 followPath->init(&state);
             }
+            if(auto follow3DPath = dynamic_cast<behaviors::Follow3DPath*>( node.get()))
+            {
+                follow3DPath->init(&state);
+            }
+
             if(auto uAVAtPoint2D = dynamic_cast<behaviors::UAVAtPoint2D*>( node.get()))
             {
                 uAVAtPoint2D->init(&state);
@@ -327,6 +507,7 @@ namespace auction_ns
         factory.registerNodeType<behaviors::UAVAtPoint>("UAVAtPoint");
         factory.registerNodeType<behaviors::FollowPath>("FollowPath");
         factory.registerNodeType<behaviors::UAVAtPoint2D>("UAVAtPoint2D");
+        factory.registerNodeType<behaviors::Follow3DPath>("Follow3DPath");
 
         //std::cout << "init nodes" << std::endl;
 
