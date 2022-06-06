@@ -111,7 +111,8 @@ namespace auction_ns
 
 
         geometry_msgs::Point goalPoint; // TODO, probably remove?
-    
+        bool goalIsSet = false;
+        
 
         nav_msgs::Path path;
         int pathIndex = 0;

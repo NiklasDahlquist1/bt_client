@@ -31,12 +31,14 @@ namespace auction_ns
 
     void Auction_client_bt::handleNewTask(auction_msgs::task task) // swtitch to bt for task, initialize new tree nodes, etc.
     {
+        taskCurrentStatus = WORKING; // ?
         taskXML = getXMLForTask(task);
         taskTree = factory.createTreeFromText(taskXML);
         initNodes(taskTree);
     }
     void Auction_client_bt::handleNoTask() // switch to no task bt
     {
+        taskCurrentStatus = WORKING; // ?
         taskXML = getXMLNoTask();
         taskTree = factory.createTreeFromText(taskXML);
         initNodes(taskTree);
@@ -250,16 +252,15 @@ namespace auction_ns
                 goal.y = BT::convertFromString<double>(parts[1]);
                 goal.z = BT::convertFromString<double>(parts[2]);
 
-
+                
                 // copmute cost, based on current state and goal pos
 
                 double cost = pow((state.currentPose.position.x - goal.x), 2) + 
                             pow((state.currentPose.position.y - goal.y), 2) + 
                             pow((state.currentPose.position.z - goal.z), 2);
-
                 priceForTask = cost;
             }
-            if(task.task_name == "moveTo3D")
+            else if(task.task_name == "moveTo3D")
             {
                 geometry_msgs::Point goal; // check number of args?
                 auto parts = BT::splitString(task.task_data, ';');
@@ -289,8 +290,14 @@ namespace auction_ns
 
                 // copmute cost, based on current state and goal pos
 
-//               double cost = pow((state.currentPose.position.x - goal.x), 2) + 
-//                             pow((state.currentPose.position.y - goal.y), 2);
+               /*double distance2D = pow((state.currentPose.position.x - goal.x), 2) + 
+                             pow((state.currentPose.position.y - goal.y), 2);
+
+                if(distance2D < 1)
+                {
+                    priceForTask = 0.1; // TODO, handle (hack for now, dsp seems to not work very close to the point?)
+                    break;
+                }*/
 
 
                 double cost;
@@ -332,10 +339,18 @@ namespace auction_ns
                 priceForTask = -1;
             }
 
+            //TODO: maybe move this type of logic to the auction server? or is it good here?
+            if(this->currentTask.task == task)
+            {
+                priceForTask = priceForTask * 0.8;
+            }
+
 
             auction_msgs::price_bid p;
             p.task_ID = task.task_ID;
             p.price = priceForTask;
+
+
 
             pricesToFill.push_back(p);
         }
@@ -388,7 +403,7 @@ namespace auction_ns
             goal.x = BT::convertFromString<double>(parts[0]);
             goal.y = BT::convertFromString<double>(parts[1]);
             //goal.z = BT::convertFromString<double>(parts[2]);
-            goal.z = 0;
+            goal.z = 2;
 
             this->state.goalPoint = goal;
 
@@ -453,7 +468,11 @@ namespace auction_ns
     {
         std::cout << "get xml for no task" << std::endl;
         // setup task variables, should be removed and merged into the tree? TODO
-        this->state.goalPoint = state.currentPose.position;
+        //if(state.goalIsSet == false)
+        //{
+            this->state.goalPoint = state.currentPose.position;
+        //    state.goalIsSet = true;
+        //}
         std::cout << "goal no task: " << state.goalPoint.x << ", " << state.goalPoint.y << ", " << state.goalPoint.z << std::endl;
 
         // TODO ???

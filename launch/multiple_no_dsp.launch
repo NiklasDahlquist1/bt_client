@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<launch>
+
+    <arg name="client_name" default="bt_uav" />
+    <group ns="$(arg client_name)1">
+        
+        <node name="bt_client" pkg="bt_client" type="bt_client" output="screen">
+            <remap from="odom" to="/firefly1/odometry_sensor1/odometry"/>
+            <remap from="path" to="dsp/path"/>   
+            <remap from="setPathGoal" to="dsp/set_goal"/>
+            <remap from="goalPose" to="/firefly1/command/pose"/>
+
+        </node>
+
+    </group>
+
+
+
+
+
+    <group ns="$(arg client_name)2">
+        <node name="bt_client" pkg="bt_client" type="bt_client" output="screen">
+            <remap from="odom" to="/firefly2/odometry_sensor1/odometry"/>
+            <remap from="path" to="dsp/path"/>   
+            <remap from="setPathGoal" to="dsp/set_goal"/>
+            <remap from="goalPose" to="/firefly2/command/pose"/>
+
+        </node>
+
+    </group>
+
+	
+	
+	
+</launch>

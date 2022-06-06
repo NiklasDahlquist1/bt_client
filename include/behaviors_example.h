@@ -18,7 +18,7 @@
 
 #include "geometry_msgs/Pose.h"
 #include "geometry_msgs/PoseStamped.h"
-//#include "tf/LinearMath/Vector3.h"
+#include "tf/LinearMath/Vector3.h"
 //#include "tf/LinearMath/Matrix3x3.h"
 //#include "tf/LinearMath/Quaternion.h"
 
@@ -56,7 +56,7 @@ namespace behaviors
                 double error2 = pow(statePtr->currentPose.position.x - point.x, 2) + 
                                 pow(statePtr->currentPose.position.y - point.y, 2);
 
-                double tol = 2;
+                double tol = 0.85; //lookahead distance
 
                 return error2 < pow(tol, 2);
             }
@@ -228,6 +228,8 @@ namespace behaviors
     {
         private: 
             auction_ns::uav_state* statePtr;
+
+            double lookAheadDistance = 3;
         public:
 
             void init(auction_ns::uav_state* statePtr)
@@ -254,7 +256,41 @@ namespace behaviors
                 geometry_msgs::PoseStamped poseStamped;
                 poseStamped.header.stamp = ros::Time::now();
                 poseStamped.header.frame_id = "world";
-                poseStamped.pose.position = statePtr->goalPoint;
+
+                tf::Vector3 currentPos;
+                tf::Vector3 goalPos;
+                tf::Vector3 dir;
+
+                currentPos.setX(statePtr->currentPose.position.x);
+                currentPos.setY(statePtr->currentPose.position.y);
+                currentPos.setZ(statePtr->currentPose.position.z);
+
+                goalPos.setX(statePtr->goalPoint.x);
+                goalPos.setY(statePtr->goalPoint.y);
+                goalPos.setZ(statePtr->goalPoint.z);
+
+                dir = goalPos - currentPos;
+                //std::cout << statePtr->goalPoint.z << std::endl;
+
+
+                double length2 = dir.length2();
+
+                if(length2 > pow(lookAheadDistance, 2))
+                {
+                    dir = dir.normalize() * lookAheadDistance;
+                }
+                //else if(length2 < pow(0.1, 2))
+                //{
+                //    dir = dir.normalize() * 0.1;
+                //}
+
+                dir = dir + currentPos;
+
+                poseStamped.pose.position.x = dir.getX();
+                poseStamped.pose.position.y = dir.getY();
+                poseStamped.pose.position.z = dir.getZ();
+                
+
                 statePtr->goalPoint_pub.publish(poseStamped);
                 return BT::NodeStatus::RUNNING;
             }
@@ -307,7 +343,7 @@ namespace behaviors
                                 pow(statePtr->currentPose.position.y - statePtr->goalPoint.y, 2) + 
                                 pow(statePtr->currentPose.position.z - statePtr->goalPoint.z, 2);
 
-                double tol = 1;
+                double tol = 0.5;
                 //std::cout << "uav error: " << error2 << std::endl;
 
                 if(error2 < pow(tol, 2))
@@ -362,7 +398,7 @@ namespace behaviors
                 double error2 = pow(statePtr->currentPose.position.x - statePtr->goalPoint.x, 2) + 
                                 pow(statePtr->currentPose.position.y - statePtr->goalPoint.y, 2);
 
-                double tol = 0.2;
+                double tol = 0.6;
                 //std::cout << "uav error: " << error2 << std::endl;
 
                 if(error2 < pow(tol, 2))
