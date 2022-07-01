@@ -16,6 +16,7 @@ find_package(
     auction_client
     behaviortree_cpp_v3
     dsp
+    ros_turtlebot_control
 )
 
 ## System dependencies are found with CMake's conventions
@@ -215,13 +216,17 @@ include_directories(
 
 
 
-add_executable(bt_client
-    src/bt_client_node.cpp
-    src/bt_client.cpp
-)
-add_dependencies(bt_client ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(bt_client ${catkin_LIBRARIES})
 
+
+
+
+add_executable(bt_client_ground
+    src/bt_client_node_ground.cpp
+    src/bt_client.cpp
+    src/client_groundAgent.cpp
+)
+add_dependencies(bt_client_ground ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(bt_client_ground ${catkin_LIBRARIES})
 
 
 

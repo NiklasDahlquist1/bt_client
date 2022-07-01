@@ -41,7 +41,15 @@
 #define UAV_AT_POINT_TOLERANCE 0.15
 */
 
+/*
 
+TODO:
+add actions, return to home point, take off, land, safety checks
+how to integrate CBFs?
+
+
+
+*/
 
 
 namespace behaviors

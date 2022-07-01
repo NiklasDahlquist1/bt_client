@@ -57,7 +57,7 @@
   <depend>auction_client</depend>
   <depend>behaviortree_cpp_v3</depend>
   <depend>dsp</depend>
-
+  <depend>ros_turtlebot_control</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

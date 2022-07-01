@@ -103,6 +103,10 @@ namespace auction_ns
 
 
 
+
+
+
+
     struct uav_state
     {
         geometry_msgs::Pose currentPose;
@@ -156,7 +160,7 @@ namespace auction_ns
     };
 
 
-
+/*
     struct ground_agent_state
     {
         geometry_msgs::Pose currentPose;
@@ -207,7 +211,7 @@ namespace auction_ns
         Client_groundAgent(); // setup callbacks, state (used for bt), etc. here
 
     };
-
+*/
 
 
 
