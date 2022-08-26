@@ -18,7 +18,9 @@
 #include "geometry_msgs/Pose.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "tf/LinearMath/Vector3.h"
-
+#include "tf/LinearMath/Quaternion.h"
+#include "tf/LinearMath/Matrix3x3.h"
+#include <math.h>    
 
 
 #include "client_groundAgent.hpp"
@@ -39,7 +41,7 @@ namespace behaviors
             auction_ns::ground_agent_state* statePtr;
 
             ros::Time lastServiceCall;
-            double serviceUpdateIntervall = 1;
+            double serviceUpdateIntervall = 0.9;
 
 
             bool atPoint2D(geometry_msgs::Point point)
@@ -47,7 +49,7 @@ namespace behaviors
                 double error2 = pow(statePtr->currentPose.position.x - point.x, 2) + 
                                 pow(statePtr->currentPose.position.y - point.y, 2);
 
-                double tol = 0.4; //lookahead distance
+                double tol = 0.45; //lookahead distance
 
                 return error2 < pow(tol, 2);
             }
@@ -99,28 +101,111 @@ namespace behaviors
                     poseStamped.pose.position = goalPoint;
 
 
-                    if(ros::Time::now().toSec() > this->lastServiceCall.toSec() + this->serviceUpdateIntervall)
+
+
+                    // find goal yaw
+                    tf::Vector3 current_path_goal;
+                    tf::Vector3 path_next_point;
+                    tf::Vector3 dir;
+                    tf::Vector3 normal_yaw;
+                    normal_yaw.setX(1);
+                    normal_yaw.setY(0);
+                    normal_yaw.setZ(0);
+
+
+                    //std::cout << "TEST" << "\n";
+
+
+
+
+                    if (statePtr->path.poses.size() > statePtr->pathIndex + 1)
                     {
-                        lastServiceCall = ros::Time::now();
+                        current_path_goal.setX(statePtr->path.poses[statePtr->pathIndex].pose.position.x); 
+                        current_path_goal.setY(statePtr->path.poses[statePtr->pathIndex].pose.position.y);
+                        current_path_goal.setZ(statePtr->path.poses[statePtr->pathIndex].pose.position.z);
+
+                        //current_path_goal.setX(statePtr->currentPose.position.x); 
+                        //current_path_goal.setY(statePtr->currentPose.position.y);
+                        //current_path_goal.setZ(statePtr->currentPose.position.z);
 
 
-                        // send current goal to controller
-                        ros_turtlebot_control::MoveToPoint srv_moveTo;
-                        srv_moveTo.request.x = goalPoint.x;
-                        srv_moveTo.request.y = goalPoint.y;
-                        
-                        if (statePtr->setGoal_srv.call(srv_moveTo))
-                        {
+                        path_next_point.setX(statePtr->path.poses[statePtr->pathIndex + 1].pose.position.x + 0.001); // noise for later
+                        path_next_point.setY(statePtr->path.poses[statePtr->pathIndex + 1].pose.position.y - 0.001);
+                        path_next_point.setZ(statePtr->path.poses[statePtr->pathIndex + 1].pose.position.z);
+                    }
+                    else
+                    {
+                        int last_index = statePtr->path.poses.size() - 1;
 
-                        }
-                        else
-                        {
-                            std::cout << "Failed to call service MoveToPoint for turtle control" << std::endl;
-                        }
+                        // set direction between the two last points in the path
+                        current_path_goal.setX(statePtr->path.poses[last_index - 1].pose.position.x);
+                        current_path_goal.setY(statePtr->path.poses[last_index - 1].pose.position.y);
+                        current_path_goal.setZ(statePtr->path.poses[last_index - 1].pose.position.z);
+
+                        path_next_point.setX(statePtr->path.poses[last_index].pose.position.x + 0.001); // noise for later
+                        path_next_point.setY(statePtr->path.poses[last_index].pose.position.y - 0.001);
+                        path_next_point.setZ(statePtr->path.poses[last_index].pose.position.z);
+
                     }
 
-                    
-                    //statePtr->goalPoint_pub.publish(poseStamped);
+
+
+
+
+
+                    dir = path_next_point - current_path_goal;
+                    dir.setZ(0);
+                    tf::Quaternion quat_goal;
+                    tf::Quaternion quat_current;
+                    quat_current.setX(statePtr->currentPose.orientation.x);
+                    quat_current.setY(statePtr->currentPose.orientation.y);
+                    quat_current.setZ(statePtr->currentPose.orientation.z);
+                    quat_current.setW(statePtr->currentPose.orientation.w);
+                    tf::Matrix3x3 rot_current(quat_current);
+                    double roll, pitch, yaw;
+                    rot_current.getRPY(roll, pitch, yaw);
+
+
+                    tf::Vector3 current_pos;
+                    tf::Vector3 relative_goal;
+                    tf::Vector3 current_yaw;
+                    current_pos.setX(statePtr->currentPose.position.x);
+                    current_pos.setY(statePtr->currentPose.position.y);
+                    current_pos.setZ(statePtr->currentPose.position.z);
+                    relative_goal = path_next_point - current_pos;
+                    current_yaw.setX(cos(yaw));
+                    current_yaw.setY(sin(yaw));
+                    //current_yaw.setY(0);
+
+                    double angle_goal;
+
+                    double test = current_yaw.dot(relative_goal);
+                    //std::cout << "test " << test << "\n";
+                    if(test < 0) // next point is behind turtlebot
+                    {                        
+                        std::cout << "reversing" << "\n";
+                        dir = -dir;
+                        angle_goal = atan2(dir.getY(), dir.getX());
+                        quat_goal.setRPY(0, 0, angle_goal);
+                    }
+                    else
+                    {
+                        angle_goal = atan2(dir.getY(), dir.getX());
+                        quat_goal.setRPY(0, 0, angle_goal);
+                    }
+
+
+
+
+
+
+                    poseStamped.pose.orientation.x = quat_goal.getX();
+                    poseStamped.pose.orientation.y = quat_goal.getY();
+                    poseStamped.pose.orientation.z = quat_goal.getZ();
+                    poseStamped.pose.orientation.w = quat_goal.getW();
+
+
+                    statePtr->goalPoint_pub.publish(poseStamped);
                     return BT::NodeStatus::RUNNING;
                 }
                 else
@@ -196,6 +281,7 @@ namespace behaviors
 
                 if(error2 < pow(tol, 2))
                 {
+                    /*
                     if(ros::Time::now().toSec() > this->lastServiceCall.toSec() + this->serviceUpdateIntervall)
                     {
                         lastServiceCall = ros::Time::now();
@@ -215,6 +301,16 @@ namespace behaviors
                             std::cout << "Failed to call service MoveToPoint for turtle control" << std::endl;
                         }
                     }
+                    */
+                    geometry_msgs::PoseStamped poseStamped;
+                    poseStamped.header.stamp = ros::Time::now();
+                    poseStamped.header.frame_id = "world";
+                    poseStamped.pose.position = statePtr->goalPoint;
+
+                    
+                    statePtr->goalPoint_pub.publish(poseStamped);
+
+
 
                     return BT::NodeStatus::SUCCESS;
                 }
@@ -265,7 +361,8 @@ namespace behaviors
 
             BT::NodeStatus logic()
             {
-                
+                //std::cout << "AAAAAAAAAAAAAAAAA " << statePtr->goalPoint << "\n";
+                /*
                 geometry_msgs::PoseStamped poseStamped;
                 poseStamped.header.stamp = ros::Time::now();
                 poseStamped.header.frame_id = "world";
@@ -302,8 +399,19 @@ namespace behaviors
                 poseStamped.pose.position.x = dir.getX();
                 poseStamped.pose.position.y = dir.getY();
                 poseStamped.pose.position.z = dir.getZ();
-                
+*/
 
+
+                //statePtr->goalPoint_pub.publish(poseStamped);
+                geometry_msgs::PoseStamped poseStamped;
+                poseStamped.header.stamp = ros::Time::now();
+                poseStamped.header.frame_id = "world";
+                poseStamped.pose.position = statePtr->goalPoint;
+
+                
+                statePtr->goalPoint_pub.publish(poseStamped);
+                
+/*
                 if(ros::Time::now().toSec() > this->lastServiceCall.toSec() + this->serviceUpdateIntervall)
                 {
                     lastServiceCall = ros::Time::now();
@@ -323,6 +431,7 @@ namespace behaviors
                         std::cout << "Failed to call service MoveToPoint for turtle control" << std::endl;
                     }
                 }
+*/
 
                 return BT::NodeStatus::RUNNING;
             }

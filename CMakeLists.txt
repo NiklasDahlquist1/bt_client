@@ -215,6 +215,13 @@ include_directories(
 
 
 
+add_executable(bt_client
+    src/bt_client_node.cpp
+    src/bt_client.cpp
+    src/client_uav.cpp
+)
+add_dependencies(bt_client ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(bt_client ${catkin_LIBRARIES})
 
 
 
@@ -229,6 +236,18 @@ add_dependencies(bt_client_ground ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_E
 target_link_libraries(bt_client_ground ${catkin_LIBRARIES})
 
 
+
+
+
+
+
+#add_executable(bt_client_mbzirc_hex
+#    src/bt_client_mbzirc_hex_node.cpp
+#    src/bt_client.cpp
+#    src/client_mbzirc_hex.cpp
+#)
+#add_dependencies(bt_client_mbzirc_hex ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#target_link_libraries(bt_client_mbzirc_hex ${catkin_LIBRARIES})
 
 
 

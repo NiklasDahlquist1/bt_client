@@ -1,7 +1,7 @@
 
 
-#ifndef BEHAVIORS_H
-#define BEHAVIORS_H
+#ifndef BEHAVIORS_MBZIRC_H
+#define BEHAVIORS_MBZIRC_H
 
 #include "behaviortree_cpp_v3/bt_factory.h"
 #include "behaviortree_cpp_v3/loggers/bt_cout_logger.h"
@@ -27,25 +27,20 @@
 
 
 
-#include "client_uav.hpp"
+#include "client_mbzirc_hex.hpp"
 
 
 //#include <random>
 
 
 
+#define UAV_AT_POINT_TOLERANCE 0.15
+
 /*
 #define MAX_HEIGHT_MOVETO 1.8
 #define TAKEOFF_HEIGHT 0.5
 #define LAND_HEIGHT 0.5
-#define UAV_AT_POINT_TOLERANCE 0.15
-*/
 
-/*
-
-TODO:
-add actions, return to home point, take off, land, safety checks
-how to integrate CBFs?
 
 
 
@@ -54,193 +49,17 @@ how to integrate CBFs?
 
 namespace behaviors
 {
-    class FollowPath : public BT::StatefulActionNode
-    {
-        private: 
-            auction_ns::uav_state* statePtr;
-
-            bool atPoint2D(geometry_msgs::Point point)
-            {
-                double error2 = pow(statePtr->currentPose.position.x - point.x, 2) + 
-                                pow(statePtr->currentPose.position.y - point.y, 2);
-
-                double tol = 0.85; //lookahead distance
-
-                return error2 < pow(tol, 2);
-            }
-
-        public:
-
-            void init(auction_ns::uav_state* statePtr)
-            {
-                if(statePtr == nullptr)
-                {
-                    //error
-                }
-                this->statePtr = statePtr;
-            }
-
-            FollowPath(const std::string& name, const BT::NodeConfiguration& config) : StatefulActionNode(name, config)
-            {
-            }
-
-            static BT::PortsList providedPorts()
-            {
-                return{ };
-            }
-
-            BT::NodeStatus logic()
-            {
-                if(statePtr->path.poses.size() > statePtr->pathIndex)
-                {
-                    geometry_msgs::Point goalPoint = statePtr->path.poses[statePtr->pathIndex].pose.position;
-                    while( atPoint2D(goalPoint))
-                    {
-                        if (statePtr->path.poses.size() > statePtr->pathIndex + 1)
-                        {
-                            statePtr->pathIndex++;
-                            goalPoint = statePtr->path.poses[statePtr->pathIndex].pose.position;
-                        }
-                        else 
-                        {
-                            break;
-                        }
-                    }
-                    goalPoint.z = 2; // set height
-
-
-
-                    geometry_msgs::PoseStamped poseStamped;
-                    poseStamped.header.stamp = ros::Time::now();
-                    poseStamped.header.frame_id = "world";
-                    poseStamped.pose.position = goalPoint;
-                    statePtr->goalPoint_pub.publish(poseStamped);
-                    return BT::NodeStatus::RUNNING;
-                }
-                else
-                {
-                    // no path/ path ended
-                    return BT::NodeStatus::RUNNING;
-                }
-
-            }
-            BT::NodeStatus onStart()
-            {
-                return logic();
-            }
-
-            BT::NodeStatus onRunning()
-            {
-                return logic();
-            }
-
-            void onHalted()
-            {
-                //
-            }
-    };
-
-    class Follow3DPath : public BT::StatefulActionNode
-    {
-        private: 
-            auction_ns::uav_state* statePtr;
-
-            bool atPoint3D(geometry_msgs::Point point)
-            {
-                double error2 = pow(statePtr->currentPose.position.x - point.x, 2) + 
-                                pow(statePtr->currentPose.position.y - point.y, 2) +
-                                pow(statePtr->currentPose.position.z - point.z, 2);
-
-                double tol = 1;
-
-                return error2 < pow(tol, 2);
-            }
-
-        public:
-
-            void init(auction_ns::uav_state* statePtr)
-            {
-                if(statePtr == nullptr)
-                {
-                    //error
-                }
-                this->statePtr = statePtr;
-            }
-
-            Follow3DPath(const std::string& name, const BT::NodeConfiguration& config) : StatefulActionNode(name, config)
-            {
-            }
-
-            static BT::PortsList providedPorts()
-            {
-                return{ };
-            }
-
-            BT::NodeStatus logic()
-            {
-                
-                if(statePtr->path.poses.size() > statePtr->pathIndex)
-                {
-                    geometry_msgs::Point goalPoint = statePtr->path.poses[statePtr->pathIndex].pose.position;
-                    while( atPoint3D(goalPoint))
-                    {
-                        if (statePtr->path.poses.size() > statePtr->pathIndex + 1)
-                        {
-                            statePtr->pathIndex++;
-                            goalPoint = statePtr->path.poses[statePtr->pathIndex].pose.position;
-                        }
-                        else 
-                        {
-                            break;
-                        }
-                    }
-                    //goalPoint.z = 2; // set height
-
-
-                    geometry_msgs::PoseStamped poseStamped;
-                    poseStamped.header.stamp = ros::Time::now();
-                    poseStamped.header.frame_id = "world";
-                    poseStamped.pose.position = goalPoint;
-                    statePtr->goalPoint_pub.publish(poseStamped);
-                    return BT::NodeStatus::RUNNING;
-                }
-                else
-                {
-                    // no path/ path ended
-                    return BT::NodeStatus::RUNNING;
-                }
-
-            }
-            BT::NodeStatus onStart()
-            {
-                return logic();
-            }
-
-            BT::NodeStatus onRunning()
-            {
-                return logic();
-            }
-
-            void onHalted()
-            {
-                //
-            }
-    };
-
-
-
-
 
     // remove
     class MoveToGoalPoint : public BT::StatefulActionNode
     {
         private: 
-            auction_ns::uav_state* statePtr;
+            auction_ns::mbzirc_hex_state* statePtr;
 
             double lookAheadDistance = 3;
         public:
 
-            void init(auction_ns::uav_state* statePtr)
+            void init(auction_ns::mbzirc_hex_state* statePtr)
             {
                 if(statePtr == nullptr)
                 {
@@ -323,10 +142,10 @@ namespace behaviors
     class UAVAtPoint : public BT::SyncActionNode
     {
         private: 
-            auction_ns::uav_state* statePtr;
+            auction_ns::mbzirc_hex_state* statePtr;
         public:
 
-            void init(auction_ns::uav_state* statePtr)
+            void init(auction_ns::mbzirc_hex_state* statePtr)
             {
                 if(statePtr == nullptr)
                 {
@@ -351,7 +170,7 @@ namespace behaviors
                                 pow(statePtr->currentPose.position.y - statePtr->goalPoint.y, 2) + 
                                 pow(statePtr->currentPose.position.z - statePtr->goalPoint.z, 2);
 
-                double tol = 0.5;
+                double tol = UAV_AT_POINT_TOLERANCE;
                 //std::cout << "uav error: " << error2 << std::endl;
 
                 if(error2 < pow(tol, 2))
@@ -379,10 +198,10 @@ namespace behaviors
     class UAVAtPoint2D : public BT::SyncActionNode
     {
         private: 
-            auction_ns::uav_state* statePtr;
+            auction_ns::mbzirc_hex_state* statePtr;
         public:
 
-            void init(auction_ns::uav_state* statePtr)
+            void init(auction_ns::mbzirc_hex_state* statePtr)
             {
                 if(statePtr == nullptr)
                 {
@@ -406,7 +225,7 @@ namespace behaviors
                 double error2 = pow(statePtr->currentPose.position.x - statePtr->goalPoint.x, 2) + 
                                 pow(statePtr->currentPose.position.y - statePtr->goalPoint.y, 2);
 
-                double tol = 0.6;
+                double tol = UAV_AT_POINT_TOLERANCE;
                 //std::cout << "uav error: " << error2 << std::endl;
 
                 if(error2 < pow(tol, 2))
@@ -429,128 +248,74 @@ namespace behaviors
             }
     };
 
-/*
 
-    class DelayOnce : public BT::StatefulActionNode
+
+    class MoveToGoalPoint : public BT::StatefulActionNode
     {
         private: 
-            bt_state::mav_state* state;
+            auction_ns::mbzirc_hex_state* statePtr;
 
-            ros::Time startTime;
-
-            bool alreadyDelayed = false;
-
-            BT::NodeStatus logic()
-            {
-                if(this->state == nullptr)
-                {
-                    ROS_INFO_STREAM("UAVAtHomePoint, pointer to state = null");
-                }
-
-                BT::Optional<double> msg = getInput<double>("delayTime");
-                if (!msg)
-                {
-                    throw BT::RuntimeError("missing required input [message]: ", msg.error());
-                }
-
-                //ROS_INFO_STREAM("Time left" << startTime.toSec() - ros::Time::now().toSec() + msg.value());
-                if(ros::Time::now().toSec() > startTime.toSec() + msg.value() || alreadyDelayed)
-                {
-                    alreadyDelayed = true;
-                    return BT::NodeStatus::SUCCESS;
-                }
-                else
-                {
-                    return BT::NodeStatus::RUNNING;
-                }
-            }
+            ros::Time last_tick_time;
+            int total_msgs_sent = 0;
+            double remaining_delta_time = 0;
+            
+            
 
         public:
 
-            void init(bt_state::mav_state* statePtr)
+            void init(auction_ns::mbzirc_hex_state* statePtr)
             {
                 if(statePtr == nullptr)
                 {
                     //error
                 }
-                this->state = statePtr;
+                this->statePtr = statePtr;
             }
 
-            DelayOnce(const std::string& name, const BT::NodeConfiguration& config) : StatefulActionNode(name, config)
+            MoveToGoalPoint(const std::string& name, const BT::NodeConfiguration& config) : StatefulActionNode(name, config)
             {
             }
 
             static BT::PortsList providedPorts()
             {
-                return{ BT::InputPort<double>("delayTime") };
+                return{ };
             }
-
-            BT::NodeStatus onStart()
-            {
-                startTime = ros::Time::now();
-                return logic();
-            }
-
-            BT::NodeStatus onRunning()
-            {
-                return logic();
-            }
-
-            void onHalted()
-            {
-                //
-            }
-
-
-
-    };
-
-
-
-
-
-
-
-
-
-    class Explore : public BT::StatefulActionNode
-    {
-        private: 
-            bt_state::mav_state* state;
-
 
             BT::NodeStatus logic()
             {
+                /*
+                   send data at given rate:
+                */
+                double delta_time = ros::Time::now().toSec() - this->last_tick_time.toSec() + this->remaining_delta_time;
+                double time_per_msg = 1 / this->statePtr->msgs_per_sec;
+                int msgs_sent = 0;
+
+
+                while(delta_time > time_per_msg * msgs_sent)
+                {
+                    // check if all msgs have already been sent
+                    if(this->total_msgs_sent >= this->statePtr->packet_num)
+                    {
+                        return BT::NodeStatus::SUCCESS;
+                    }
+
+                    // send msg
+
+                    msgs_sent += 1;
+                }
+                this->total_msgs_sent += msgs_sent;
+
+                this->remaining_delta_time = delta_time - time_per_msg * msgs_sent;
+                this->last_tick_time = ros::Time::now();
+                
+
 
                 return BT::NodeStatus::RUNNING;
             }
-
-        public:
-
-            void init(bt_state::mav_state* statePtr)
-            {
-                if(statePtr == nullptr)
-                {
-                    //error
-                }
-                this->state = statePtr;
-            }
-
-            Explore(const std::string& name, const BT::NodeConfiguration& config) : StatefulActionNode(name, config)
-            {
-            }
-
-            static BT::PortsList providedPorts()
-            {
-                return{  };
-            }
-
             BT::NodeStatus onStart()
             {
-                if(this->state == nullptr)
-                {
-                    ROS_INFO_STREAM("Explore, pointer to state = null");
-                }
+                this->last_tick_time = ros::Time::now();
+
                 return logic();
             }
 
@@ -565,9 +330,30 @@ namespace behaviors
             }
     };
 
-*/
 
 } // end namespace
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

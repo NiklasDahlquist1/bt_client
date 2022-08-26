@@ -47,8 +47,8 @@ namespace auction_ns
         geometry_msgs::Pose currentPose;
         
         geometry_msgs::Point goalPoint;
-        ros::ServiceClient setGoal_srv;
-        //ros::Publisher goalPoint_pub;
+        //ros::ServiceClient setGoal_srv;
+        ros::Publisher goalPoint_pub;
         ros::Publisher setGoalPathPlanner_pub;
 
 

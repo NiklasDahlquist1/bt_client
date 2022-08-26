@@ -1,5 +1,7 @@
-#include "client_uav.hpp"
+#include "client_mbzirc_hex.hpp"
 //#include "ros/ros.h"
+
+
 
 int main(int argc, char** argv)
 {
@@ -7,7 +9,7 @@ int main(int argc, char** argv)
 
     ros::NodeHandle nh;
 
-    auction_ns::Client_uav client = auction_ns::Client_uav();
+    auction_ns::Client_mbzirc_hex client = auction_ns::Client_mbzirc_hex();
     
     ros::Rate r = ros::Rate(1);
     r.sleep();

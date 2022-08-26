@@ -27,7 +27,7 @@ namespace auction_ns
         odom_sub = nodeHandle.subscribe("odom", 1000, &Client_groundAgent::odomCB, this);
         path_sub = nodeHandle.subscribe("path", 1000, &Client_groundAgent::pathCB, this);
         //
-        //state.goalPoint_pub = nodeHandle.advertise<geometry_msgs::PoseStamped>("goalPose", 1000);
+        state.goalPoint_pub = nodeHandle.advertise<geometry_msgs::PoseStamped>("goalPose", 1000);
         state.setGoalPathPlanner_pub = nodeHandle.advertise<geometry_msgs::Point>("setPathGoal", 1000);
 
 
@@ -35,7 +35,7 @@ namespace auction_ns
         initFactory(factory);
 
         pathCostServiceClient = nodeHandle.serviceClient<dsp::pathCost>("dsp/path_cost");
-        this->state.setGoal_srv = nodeHandle.serviceClient<ros_turtlebot_control::MoveToPoint>("turtle/move_to_point");
+        //this->state.setGoal_srv = nodeHandle.serviceClient<ros_turtlebot_control::MoveToPoint>("turtle/move_to_point");
 
     }
 
@@ -62,15 +62,16 @@ namespace auction_ns
 
                 // copmute cost, based on current state and goal pos
 
-               /*double distance2D = pow((state.currentPose.position.x - goal.x), 2) + 
+/*
+               double cost = pow((state.currentPose.position.x - goal.x), 2) + 
                              pow((state.currentPose.position.y - goal.y), 2);
 
-                if(distance2D < 1)
+                if(cost < 1)
                 {
-                    priceForTask = 0.1; // TODO, handle (hack for now, dsp seems to not work very close to the point?)
+                    cost = 0.1; // TODO, handle (hack for now, dsp seems to not work very close to the point?)
                     break;
-                }*/
-
+                }
+*/
 
                 double cost;
                 dsp::pathCost srv;
@@ -105,6 +106,28 @@ namespace auction_ns
 
                 priceForTask = cost;
             }
+            else if(task.task_name == "moveStraightTo2D")
+            {
+                geometry_msgs::Point goal; // check number of args? 
+                auto parts = BT::splitString(task.task_data, ';');
+                goal.x = BT::convertFromString<double>(parts[0]);
+                goal.y = BT::convertFromString<double>(parts[1]);
+                goal.z = BT::convertFromString<double>(parts[2]);
+
+
+                // copmute cost, based on current state and goal pos
+
+
+               double cost = pow((state.currentPose.position.x - goal.x), 2) + 
+                             pow((state.currentPose.position.y - goal.y), 2);
+
+                if(cost < 1)
+                {
+                    cost = 0.1; // TODO, handle (hack for now, dsp seems to not work very close to the point?)
+                }
+
+                priceForTask = cost;
+            }
             else
             {
                 priceForTask = -1;
@@ -113,7 +136,7 @@ namespace auction_ns
             //TODO: maybe move this type of logic to the auction server? or is it good here?
             if(this->currentTask.task == task)
             {
-                priceForTask = priceForTask * 0.8;
+                priceForTask = priceForTask * 0.7;//0.8;
             }
 
 
@@ -160,6 +183,38 @@ namespace auction_ns
                     <ReactiveFallback name="root">
                         <Action ID="GroundAtPoint2D"/>
                         <Action ID="GroundFollowPath"/>
+                    </ReactiveFallback>
+                </BehaviorTree>
+            </root>
+            )";
+
+
+            return xml_text;
+        }
+        else if(task.task_name == "moveStraightTo2D")
+        {
+            // setup task variables, should be removed and merged into the tree? TODO
+            geometry_msgs::Point goal; // check number of args?
+            auto parts = BT::splitString(task.task_data, ';');
+            goal.x = BT::convertFromString<double>(parts[0]);
+            goal.y = BT::convertFromString<double>(parts[1]);
+            //goal.z = BT::convertFromString<double>(parts[2]);
+            goal.z = 2;
+
+            this->state.goalPoint = goal;
+
+            std::cout << "Got new task, moveStraightTo2D. Parameters: " << goal.x << "," << goal.y  << std::endl;
+
+
+            state.setGoalPathPlanner_pub.publish(goal);
+
+            //generate XML here
+            static const char* xml_text = R"(
+            <root main_tree_to_execute = "MainTree" >
+                <BehaviorTree ID="MainTree">
+                    <ReactiveFallback name="root">
+                        <Action ID="GroundAtPoint2D"/>
+                        <Action ID="GroundMoveToGoalPoint"/>
                     </ReactiveFallback>
                 </BehaviorTree>
             </root>
