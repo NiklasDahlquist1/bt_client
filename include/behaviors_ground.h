@@ -28,6 +28,7 @@
 
 
 
+#define TOLERANCE_AT_POINT 0.17
 
 
 
@@ -183,7 +184,7 @@ namespace behaviors
                     //std::cout << "test " << test << "\n";
                     if(test < 0) // next point is behind turtlebot
                     {                        
-                        std::cout << "reversing" << "\n";
+                        //std::cout << "reversing" << "\n";
                         dir = -dir;
                         angle_goal = atan2(dir.getY(), dir.getX());
                         quat_goal.setRPY(0, 0, angle_goal);
@@ -276,7 +277,7 @@ namespace behaviors
                 //std::cout << "curent x: " << statePtr->currentPose.position.x << std::endl;
                 double error2 = pow(statePtr->currentPose.position.x - statePtr->goalPoint.x, 2) + 
                                 pow(statePtr->currentPose.position.y - statePtr->goalPoint.y, 2);
-                double tol = 0.2;
+                double tol = TOLERANCE_AT_POINT;
                 //std::cout << "uav error: " << error2 << std::endl;
 
                 if(error2 < pow(tol, 2))
@@ -322,6 +323,140 @@ namespace behaviors
                 //
             }
     };
+
+
+
+
+
+
+
+
+    class Ground_at_pick_place : public BT::SyncActionNode
+    {
+        private: 
+            auction_ns::ground_agent_state* statePtr;
+            //bool completed = false;
+
+
+        public:
+
+            void init(auction_ns::ground_agent_state* statePtr)
+            {
+                if(statePtr == nullptr)
+                {
+                    //error
+                }
+                this->statePtr = statePtr;
+            }
+
+            Ground_at_pick_place(const std::string& name, const BT::NodeConfiguration& config) : SyncActionNode(name, config)
+            {
+            }
+
+            static BT::PortsList providedPorts()
+            {
+                return{  };
+            }
+
+            BT::NodeStatus tick() override
+            {
+                //std::cout << "curent x: " << statePtr->currentPose.position.x << std::endl;
+                double error2 = pow(statePtr->currentPose.position.x - statePtr->pick_goal.x, 2) + 
+                                pow(statePtr->currentPose.position.y - statePtr->pick_goal.y, 2);
+                double tol = TOLERANCE_AT_POINT;
+
+                if(error2 < pow(tol, 2) || statePtr->pick_complete == true)
+                {
+                    statePtr->pick_complete = true;
+                    /*
+                    geometry_msgs::PoseStamped poseStamped;
+                    poseStamped.header.stamp = ros::Time::now();
+                    poseStamped.header.frame_id = "world";
+                    poseStamped.pose.position = statePtr->pick_goal;
+
+                    
+                    statePtr->goalPoint_pub.publish(poseStamped);
+                    */
+                    statePtr->task_can_be_swapped = false;
+
+
+                    return BT::NodeStatus::SUCCESS;
+                }
+                else
+                {
+                    // set goal for "follow path" behavior
+                    statePtr->goalPoint = statePtr->pick_goal;
+                    statePtr->setGoalPathPlanner_pub.publish(statePtr->goalPoint);
+
+                    return BT::NodeStatus::FAILURE;
+                }
+                //
+            }
+    };
+
+
+    class Ground_at_place_place : public BT::SyncActionNode
+    {
+        private: 
+            auction_ns::ground_agent_state* statePtr;
+
+
+
+        public:
+
+            void init(auction_ns::ground_agent_state* statePtr)
+            {
+                if(statePtr == nullptr)
+                {
+                    //error
+                }
+                this->statePtr = statePtr;
+            }
+
+            Ground_at_place_place(const std::string& name, const BT::NodeConfiguration& config) : SyncActionNode(name, config)
+            {
+            }
+
+            static BT::PortsList providedPorts()
+            {
+                return{  };
+            }
+
+            BT::NodeStatus tick() override
+            {
+                //std::cout << "curent x: " << statePtr->currentPose.position.x << std::endl;
+                double error2 = pow(statePtr->currentPose.position.x - statePtr->place_goal.x, 2) + 
+                                pow(statePtr->currentPose.position.y - statePtr->place_goal.y, 2);
+                double tol = TOLERANCE_AT_POINT;
+
+                if(error2 < pow(tol, 2))
+                {
+                    /*
+                    geometry_msgs::PoseStamped poseStamped;
+                    poseStamped.header.stamp = ros::Time::now();
+                    poseStamped.header.frame_id = "world";
+                    poseStamped.pose.position = statePtr->pick_goal;
+*/
+                    statePtr->pick_complete = false;
+
+
+                    return BT::NodeStatus::SUCCESS;
+                }
+                else
+                {
+                    // set goal for "follow path" behavior
+                    statePtr->goalPoint = statePtr->place_goal;
+                    statePtr->setGoalPathPlanner_pub.publish(statePtr->goalPoint);
+
+                    return BT::NodeStatus::FAILURE;
+                }
+
+                //
+            }
+    };
+
+
+
 
 
 

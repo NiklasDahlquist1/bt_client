@@ -48,7 +48,10 @@ namespace auction_ns
         for(auction_msgs::task task : tasks)
         {
             double priceForTask = -1;
-            
+
+
+
+
 
 
             if(task.task_name == "moveTo2D")
@@ -106,6 +109,83 @@ namespace auction_ns
 
                 priceForTask = cost;
             }
+            else if(task.task_name == "pickPlace")
+            {
+                geometry_msgs::Point goal_pick; 
+                geometry_msgs::Point goal_place; 
+                auto parts = BT::splitString(task.task_data, ';');
+                goal_pick.x = BT::convertFromString<double>(parts[0]);
+                goal_pick.y = BT::convertFromString<double>(parts[1]);
+                goal_pick.z = 0;
+
+                goal_place.x = BT::convertFromString<double>(parts[2]);
+                goal_place.y = BT::convertFromString<double>(parts[3]);
+                goal_place.z = 0;
+
+
+                double cost = 0;
+                dsp::pathCost srv;
+                bool service_failed = false;
+
+
+                // calculate cost to pick
+
+                srv.request.start = state.currentPose.position;
+                srv.request.start.z = 0;
+                //std::cout << "start: " << state.currentPose.position << std::endl;
+                srv.request.stop = goal_pick;
+                srv.request.stop.z = 0;
+                
+
+                if (pathCostServiceClient.call(srv))
+                {
+                    cost += srv.response.cost;
+                    if(cost > 1e9)
+                    {
+                        service_failed = true;
+                    }
+                }
+                else
+                {
+                    std::cout << "Failed to call service path_cost1" << std::endl;
+                    service_failed = true;
+                }
+ 
+
+                 // calculate cost to place
+                srv.request.start = goal_pick;
+                srv.request.stop = goal_place;
+
+
+                if (pathCostServiceClient.call(srv))
+                {
+                    cost += srv.response.cost;
+                    if(cost > 1e9)
+                    {
+                        service_failed = true;
+                    }
+                }
+                else
+                {
+                    std::cout << "Failed to call service path_cost2" << std::endl;
+                    service_failed = true;
+                }
+
+
+                //
+                if(service_failed == true)
+                {
+                    cost = -1;
+                }
+
+
+
+        
+                    
+                //std::cout << "Client: " << name <<  " Cost: " << srv.response.cost << std::endl;
+
+                priceForTask = cost;
+            }
             else if(task.task_name == "moveStraightTo2D")
             {
                 geometry_msgs::Point goal; // check number of args? 
@@ -140,6 +220,23 @@ namespace auction_ns
             }
 
 
+            // check flag from BT, if current task can be abandoned
+            if(state.task_can_be_swapped == false)
+            {
+                // to make sure that this agent will win his current task
+                if(task == this->currentTask.task)
+                {
+                    priceForTask = 0.01;
+                    //std::cout << "TASK CANNOT BE SWAPPED" << "\n";
+                }
+                else
+                {
+                    // we can still participate with the other tasks
+                    //priceForTask = -1;
+                }
+            }
+
+
             auction_msgs::price_bid p;
             p.task_ID = task.task_ID;
             p.price = priceForTask;
@@ -159,6 +256,7 @@ namespace auction_ns
 
     std::string Client_groundAgent::getXMLForTask(auction_msgs::task task)
     {
+
         if(task.task_name == "moveTo2D")
         {
             // setup task variables, should be removed and merged into the tree? TODO
@@ -223,6 +321,56 @@ namespace auction_ns
 
             return xml_text;
         }
+        else if(task.task_name == "pickPlace")
+        {
+            
+            geometry_msgs::Point pick_goal;
+            geometry_msgs::Point place_goal;
+
+            auto parts = BT::splitString(task.task_data, ';');
+
+            pick_goal.x = BT::convertFromString<double>(parts[0]);
+            pick_goal.y = BT::convertFromString<double>(parts[1]);
+            pick_goal.z = 0;
+
+            place_goal.x = BT::convertFromString<double>(parts[2]);
+            place_goal.y = BT::convertFromString<double>(parts[3]);
+            place_goal.z = 0;
+
+
+            this->state.pick_goal = pick_goal;
+            this->state.place_goal = place_goal;
+
+
+            std::cout << "Got new task, pickPlace. pick: " << pick_goal.x << ", " << pick_goal.y << " place: " << place_goal.x << ", " << place_goal.x << std::endl;
+
+
+            state.setGoalPathPlanner_pub.publish(pick_goal);
+
+            //generate XML here
+            static const char* xml_text = R"(
+            <root main_tree_to_execute = "MainTree" >
+                <BehaviorTree ID="MainTree">
+                    <ReactiveSequence name="root">
+
+                        <ReactiveFallback>
+                            <Action ID="Ground_at_pick_place"/>
+                            <Action ID="GroundFollowPath"/>
+                        </ReactiveFallback>
+
+                        <ReactiveFallback>
+                            <Action ID="Ground_at_place_place"/>
+                            <Action ID="GroundFollowPath"/>
+                        </ReactiveFallback>
+
+                    </ReactiveSequence>
+                </BehaviorTree>
+            </root>
+            )";
+
+
+            return xml_text;
+        }
         else
         {
             return "";
@@ -231,6 +379,8 @@ namespace auction_ns
 
     std::string Client_groundAgent::getXMLNoTask()
     {
+        state.task_can_be_swapped = true;
+
         std::cout << "get xml for no task" << std::endl;
         // setup task variables, should be removed and merged into the tree? TODO
         //static bool goalIsSet = false;
@@ -278,6 +428,16 @@ namespace auction_ns
             {
                 groundAtPoint2D->init(&state);
             }
+
+            if(auto ground_at_pick_place = dynamic_cast<behaviors::Ground_at_pick_place*>( node.get()))
+            {
+                ground_at_pick_place->init(&state);
+            }
+
+            if(auto ground_at_place_place = dynamic_cast<behaviors::Ground_at_place_place*>( node.get()))
+            {
+                ground_at_place_place->init(&state);
+            }
         }
     }
     void Client_groundAgent::initFactory(BT::BehaviorTreeFactory& factory)
@@ -285,6 +445,8 @@ namespace auction_ns
         factory.registerNodeType<behaviors::GroundAtPoint2D>("GroundAtPoint2D");
         factory.registerNodeType<behaviors::GroundFollowPath>("GroundFollowPath");
         factory.registerNodeType<behaviors::GroundMoveToGoalPoint>("GroundMoveToGoalPoint");
+        factory.registerNodeType<behaviors::Ground_at_pick_place>("Ground_at_pick_place");
+        factory.registerNodeType<behaviors::Ground_at_place_place>("Ground_at_place_place");
 
 
         //std::cout << "init nodes" << std::endl;

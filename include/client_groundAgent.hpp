@@ -52,6 +52,15 @@ namespace auction_ns
         ros::Publisher setGoalPathPlanner_pub;
 
 
+
+        // pick and place task, tmp
+        geometry_msgs::Point pick_goal;
+        geometry_msgs::Point place_goal;
+        bool pick_complete = false;
+
+
+        // bt flag
+        bool task_can_be_swapped = true;
     
 
         nav_msgs::Path path;
