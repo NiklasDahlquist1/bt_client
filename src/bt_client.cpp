@@ -65,6 +65,11 @@ namespace auction_ns
             taskCurrentStatus = WORKING;
         }
     }
+    //TODO, remove. see header
+    void Auction_client_bt::public_execute_behavior()
+    {
+        executeCurrentBehavior();
+    }
     Auction_client::taskStatus Auction_client_bt::currentTaskStatus() // check if task is completed, (maybe return bt status? in this case)
     {
         return taskCurrentStatus;

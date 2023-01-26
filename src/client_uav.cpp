@@ -115,6 +115,8 @@ namespace auction_ns
     {
         auto start = std::chrono::steady_clock::now();
         
+        double ros_start_time = ros::Time::now().toSec();
+
         for(auction_msgs::task task : tasks)
         {
             double priceForTask = -1;
@@ -198,7 +200,7 @@ namespace auction_ns
                 else
                 {
                     std::cout << "Failed to call service path_cost" << std::endl;
-                    cost = -1;
+                    cost = 0; // TODO: change this back to -1?? hacky solution for konsuln... (planner fails when going from node_x -> node_x...)
                     //return 1;
                 }
  
@@ -217,7 +219,7 @@ namespace auction_ns
             //TODO: maybe move this type of logic to the auction server? or is it good here?
             if(this->currentTask.task == task)
             {
-                priceForTask = priceForTask * 0.8;
+                priceForTask = priceForTask * 0.75;
             }
 
 
@@ -228,6 +230,14 @@ namespace auction_ns
 
 
             pricesToFill.push_back(p);
+
+
+            // TODO, remove. hacky solution to tick the bt if the cost function calcualtions are slow...
+            if(ros::Time::now().toSec() - ros_start_time > 0.3)
+            {
+                //public_execute_behavior();
+                ros_start_time = ros::Time::now().toSec();
+            }
         }
         auto end = std::chrono::steady_clock::now();
         //std::cout << "Elapsed time in milliseconds: "
@@ -278,7 +288,7 @@ namespace auction_ns
             goal.x = BT::convertFromString<double>(parts[0]);
             goal.y = BT::convertFromString<double>(parts[1]);
             //goal.z = BT::convertFromString<double>(parts[2]);
-            goal.z = 2;
+            goal.z = 3.5;
 
             this->state.goalPoint = goal;
 

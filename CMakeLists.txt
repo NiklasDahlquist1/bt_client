@@ -240,6 +240,18 @@ target_link_libraries(bt_client_ground ${catkin_LIBRARIES})
 
 
 
+add_executable(bt_client_turtlebot
+    src/bt_client_turtlebot_ground.cpp
+    src/bt_client.cpp
+    src/client_turtlebot.cpp
+)
+add_dependencies(bt_client_turtlebot ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(bt_client_turtlebot ${catkin_LIBRARIES})
+
+
+
+
+
 
 #add_executable(bt_client_mbzirc_hex
 #    src/bt_client_mbzirc_hex_node.cpp

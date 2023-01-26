@@ -86,6 +86,8 @@ namespace auction_ns
         public:
         using Auction_client::Auction_client;
 
+        void public_execute_behavior(); // TODO, remove. hacky way of ticking bt while calculating cost functions
+
         Auction_client_bt(); // setup callbacks, state (used for bt), etc. here
     };
 

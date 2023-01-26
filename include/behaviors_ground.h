@@ -28,7 +28,7 @@
 
 
 
-#define TOLERANCE_AT_POINT 0.17
+#define TOLERANCE_AT_POINT 0.6//0.17
 
 
 
@@ -43,6 +43,8 @@ namespace behaviors
 
             ros::Time lastServiceCall;
             double serviceUpdateIntervall = 0.9;
+            bool moving_forward = true;
+            bool direction_is_set = false;
 
 
             bool atPoint2D(geometry_msgs::Point point)
@@ -50,7 +52,7 @@ namespace behaviors
                 double error2 = pow(statePtr->currentPose.position.x - point.x, 2) + 
                                 pow(statePtr->currentPose.position.y - point.y, 2);
 
-                double tol = 0.45; //lookahead distance
+                double tol = 2.5;//1.75;//0.55; //lookahead distance
 
                 return error2 < pow(tol, 2);
             }
@@ -182,21 +184,93 @@ namespace behaviors
 
                     double test = current_yaw.dot(relative_goal);
                     //std::cout << "test " << test << "\n";
-                    if(test < 0) // next point is behind turtlebot
+                    /*if(test < 0) // next point is behind turtlebot
                     {                        
                         //std::cout << "reversing" << "\n";
                         dir = -dir;
                         angle_goal = atan2(dir.getY(), dir.getX());
                         quat_goal.setRPY(0, 0, angle_goal);
+
                     }
                     else
                     {
                         angle_goal = atan2(dir.getY(), dir.getX());
                         quat_goal.setRPY(0, 0, angle_goal);
+                    }*/
+
+
+                    
+                    if(test < 0) // next point is behind turtlebot
+                    {                        
+                        moving_forward = false;
+                    }
+                    else
+                    {
+                        moving_forward = true;
+                    }
+
+
+                    // dont update yaw angle if really close to goal TODO: check somewhere else
+                    // here we check for the last point in the path
+                    if(pow(statePtr->currentPose.position.x - statePtr->path.poses[statePtr->path.poses.size() - 1].pose.position.x, 2) + 
+                       pow(statePtr->currentPose.position.y - statePtr->path.poses[statePtr->path.poses.size() - 1].pose.position.y, 2) < pow(1.5, 2))
+                    {
+                        //std::cout << "close\n";
+                        if(direction_is_set == false)
+                        {
+                            direction_is_set = true;
+                            if(test < 0) // next point is behind turtlebot
+                            {         
+                                //std::cout << "BACKING!!!\n";              
+                                //std::cout << "reversing" << "\n";
+                                dir = -dir;
+                                angle_goal = atan2(dir.getY(), dir.getX());
+                                quat_goal.setRPY(0, 0, angle_goal);
+
+                            }
+                            else
+                            {
+                                //std::cout << "FORWARD!!!!\n";    
+                                angle_goal = atan2(dir.getY(), dir.getX());
+                                quat_goal.setRPY(0, 0, angle_goal);
+                            }
+                            this->statePtr->yaw_from_path = angle_goal;
+                            //std::cout << "setting current yaw: " << angle_goal << "\n";
+                        }
+                        else if(direction_is_set == true)
+                        {
+                            angle_goal = this->statePtr->yaw_from_path;
+                        }
+                    }
+                    else
+                    {
+                        //std::cout << "far away\n";
+                        direction_is_set = false;
                     }
 
 
 
+
+                    if(direction_is_set == false)
+                    {
+                        if(moving_forward == false) // next point is behind turtlebot
+                        {                        
+                            //std::cout << "reversing" << "\n";
+                            dir = -dir;
+                            angle_goal = atan2(dir.getY(), dir.getX());
+                            quat_goal.setRPY(0, 0, angle_goal);
+
+                        }
+                        else if(moving_forward == true)
+                        {
+                            angle_goal = atan2(dir.getY(), dir.getX());
+                            quat_goal.setRPY(0, 0, angle_goal);
+                        }
+                        //this->statePtr->yaw_from_path = angle_goal;
+                    }
+
+
+                   
 
 
 
@@ -205,8 +279,14 @@ namespace behaviors
                     poseStamped.pose.orientation.z = quat_goal.getZ();
                     poseStamped.pose.orientation.w = quat_goal.getW();
 
+                    // for vizualization
+                    poseStamped.pose.position.z = 0;
+                    poseStamped.pose.orientation.z = angle_goal;
+
+                    //statePtr->setGoalPathPlanner_pub.publish(goalPoint);
 
                     statePtr->goalPoint_pub.publish(poseStamped);
+                    //std::cout << "FOLLOW PATH PUB YAW: " << poseStamped.pose.orientation.z << "\n";
                     return BT::NodeStatus::RUNNING;
                 }
                 else
@@ -307,6 +387,9 @@ namespace behaviors
                     poseStamped.header.stamp = ros::Time::now();
                     poseStamped.header.frame_id = "world";
                     poseStamped.pose.position = statePtr->goalPoint;
+
+                    poseStamped.pose.orientation.z = this->statePtr->yaw_from_path;
+                    //std::cout << "yaw at point: " << this->statePtr->yaw_from_path << "\n";
 
                     
                     statePtr->goalPoint_pub.publish(poseStamped);

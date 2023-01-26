@@ -52,6 +52,8 @@ namespace auction_ns
         ros::Publisher setGoalPathPlanner_pub;
 
 
+        geometry_msgs::Point starting_point;
+
 
         // pick and place task, tmp
         geometry_msgs::Point pick_goal;
@@ -61,6 +63,9 @@ namespace auction_ns
 
         // bt flag
         bool task_can_be_swapped = true;
+
+        // todo remove?
+        double yaw_from_path = 0;
     
 
         nav_msgs::Path path;

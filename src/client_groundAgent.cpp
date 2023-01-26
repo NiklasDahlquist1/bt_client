@@ -99,7 +99,7 @@ namespace auction_ns
                 else
                 {
                     std::cout << "Failed to call service path_cost" << std::endl;
-                    cost = -1;
+                    cost = 0;//-1;
                     //return 1;
                 }
  
@@ -216,7 +216,7 @@ namespace auction_ns
             //TODO: maybe move this type of logic to the auction server? or is it good here?
             if(this->currentTask.task == task)
             {
-                priceForTask = priceForTask * 0.7;//0.8;
+                priceForTask = priceForTask * 0.85;//0.8;
             }
 
 
@@ -340,6 +340,7 @@ namespace auction_ns
 
             this->state.pick_goal = pick_goal;
             this->state.place_goal = place_goal;
+            this->state.pick_complete = false; // maybe fixes the issue?
 
 
             std::cout << "Got new task, pickPlace. pick: " << pick_goal.x << ", " << pick_goal.y << " place: " << place_goal.x << ", " << place_goal.x << std::endl;
@@ -381,20 +382,32 @@ namespace auction_ns
     {
         state.task_can_be_swapped = true;
 
-        std::cout << "get xml for no task" << std::endl;
         // setup task variables, should be removed and merged into the tree? TODO
         //static bool goalIsSet = false;
-        //if(goalIsSet == false)
-        //{
-            this->state.goalPoint = state.currentPose.position;
-        //    goalIsSet = true;
-        //}
+
+
+
+        // save starting point first time, quite hacky, just for experiment TODO: FIX
+        if(state.starting_point.z < 1)
+        {
+            state.starting_point = state.currentPose.position;
+            state.starting_point.z = 1000;
+            std::cout << "Saved starting pos " << state.starting_point.x << ", " << state.starting_point.y << "\n";
+        }
+
+        this->state.goalPoint = state.starting_point;//state.currentPose.position;
+
         std::cout << "goal no task: " << state.goalPoint.x << ", " << state.goalPoint.y << std::endl;
+
+
+
+
 
         // TODO ???
         //state.goalPoint.z = 2;
-        geometry_msgs::Point tmp_path = state.currentPose.position;
-        tmp_path.x += 0.1;
+        //geometry_msgs::Point tmp_path = state.currentPose.position;
+        geometry_msgs::Point tmp_path = state.starting_point;//state.currentPose.position;
+        //tmp_path.x += 0.1;
         state.setGoalPathPlanner_pub.publish(tmp_path);//state.goalPoint);
 
         static const char* xml_text = R"(
@@ -402,7 +415,7 @@ namespace auction_ns
                 <BehaviorTree ID="MainTree">
                     <ReactiveFallback name="root">
                         <Action ID="GroundAtPoint2D"/>
-                        <Action ID="GroundMoveToGoalPoint"/>
+                        <Action ID="GroundFollowPath"/>
                     </ReactiveFallback>
                 </BehaviorTree>
             </root>

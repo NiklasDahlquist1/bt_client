@@ -64,8 +64,9 @@ namespace behaviors
                 double error2 = pow(statePtr->currentPose.position.x - point.x, 2) + 
                                 pow(statePtr->currentPose.position.y - point.y, 2);
 
-                double tol = 0.85; //lookahead distance
-
+                //double tol = 0.85; //lookahead distance
+                double tol = 1.25;
+                
                 return error2 < pow(tol, 2);
             }
 
@@ -351,7 +352,7 @@ namespace behaviors
                                 pow(statePtr->currentPose.position.y - statePtr->goalPoint.y, 2) + 
                                 pow(statePtr->currentPose.position.z - statePtr->goalPoint.z, 2);
 
-                double tol = 0.5;
+                double tol = 0.7;
                 //std::cout << "uav error: " << error2 << std::endl;
 
                 if(error2 < pow(tol, 2))
@@ -406,7 +407,7 @@ namespace behaviors
                 double error2 = pow(statePtr->currentPose.position.x - statePtr->goalPoint.x, 2) + 
                                 pow(statePtr->currentPose.position.y - statePtr->goalPoint.y, 2);
 
-                double tol = 0.6;
+                double tol = 0.6*2.5;
                 //std::cout << "uav error: " << error2 << std::endl;
 
                 if(error2 < pow(tol, 2))
