@@ -1,0 +1,168 @@
+
+
+
+
+
+
+
+
+
+#ifndef CLIENT_GROUNDAGENT_HPP
+#define CLIENT_GROUNDAGENT_HPP
+
+#include "ros/ros.h"
+#include "bt_client.hpp"
+
+
+#include "auction_msgs/auction.h"
+#include "auction_msgs/bid.h"
+#include "auction_msgs/price_bid.h"
+#include "auction_msgs/task.h"
+#include "auction_msgs/taskArray.h"
+#include "auction_msgs/task_allocated.h"
+#include "auction_msgs/task_finished.h"
+
+
+//#include "behaviortree_cpp_v3/behavior_tree.h"
+#include "behaviortree_cpp_v3/bt_factory.h"
+
+
+#include "nav_msgs/Odometry.h"
+#include "nav_msgs/Path.h"
+
+//#include "dsp/pathCost.h"
+
+
+//#include "ros_turtlebot_control/MoveToPoint.h"
+//#include "ros_turtlebot_control/MoveToPointRequest.h"
+//#include "ros_turtlebot_control/MoveToPointResponse.h"
+
+
+namespace auction_ns
+{
+
+
+    struct turtlebot_state
+    {
+        geometry_msgs::Pose currentPose;
+        
+        geometry_msgs::Point goalPoint;
+        //ros::ServiceClient setGoal_srv;
+        ros::Publisher goalPoint_pub;
+        ros::Publisher setGoalPathPlanner_pub;
+
+
+        geometry_msgs::Point starting_point;
+
+
+        // pick and place task, tmp
+        geometry_msgs::Point pick_goal;
+        geometry_msgs::Point place_goal;
+        bool pick_complete = false;
+
+
+        // bt flag
+        bool task_can_be_swapped = true;
+
+        // todo remove?
+        double yaw_from_path = 0;
+    
+
+        nav_msgs::Path path;
+        int pathIndex = 0;
+    };
+
+    class Client_turtlebot : public Auction_client_bt
+    {
+        private:
+
+
+
+        turtlebot_state state;
+  
+
+        
+
+
+        //ros
+        ros::Subscriber odom_sub;
+        ros::Subscriber path_sub;
+
+        //callbacks
+        void odomCB(const nav_msgs::Odometry& msg);
+        void pathCB(const nav_msgs::Path& msg);
+
+
+        ros::ServiceClient pathCostServiceClient;
+
+
+        void costForTasks(const std::vector<auction_msgs::task>& tasks, std::vector<auction_msgs::price_bid>& pricesToFill);
+        std::string getXMLForTask(auction_msgs::task task);
+        std::string getXMLNoTask();
+        void initNodes(BT::Tree& tree);
+        void initFactory(BT::BehaviorTreeFactory& factory);
+
+
+
+        protected:
+        public:
+        using Auction_client_bt::Auction_client_bt;
+
+        Client_turtlebot(); // setup callbacks, state (used for bt), etc. here
+
+
+
+    };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+} // end namespace
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#endif
