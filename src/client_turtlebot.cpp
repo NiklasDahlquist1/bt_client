@@ -78,7 +78,7 @@ namespace auction_ns
 
 
 
-        
+
         for(const auction_msgs::task& task : tasks)
         {
             double priceForTask = -1;
